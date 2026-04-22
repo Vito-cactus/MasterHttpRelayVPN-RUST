@@ -180,11 +180,15 @@ impl ProxyServer {
         let http_mitm = self.mitm.clone();
         let http_ctx = self.rewrite_ctx.clone();
         let mut http_task = tokio::spawn(async move {
+            let mut fd_exhaust_count: u64 = 0;
             loop {
                 let (sock, peer) = match http_listener.accept().await {
-                    Ok(x) => x,
+                    Ok(x) => {
+                        fd_exhaust_count = 0;
+                        x
+                    }
                     Err(e) => {
-                        tracing::error!("accept (http): {}", e);
+                        accept_backoff("http", &e, &mut fd_exhaust_count).await;
                         continue;
                     }
                 };
@@ -204,11 +208,15 @@ impl ProxyServer {
         let socks_mitm = self.mitm.clone();
         let socks_ctx = self.rewrite_ctx.clone();
         let mut socks_task = tokio::spawn(async move {
+            let mut fd_exhaust_count: u64 = 0;
             loop {
                 let (sock, peer) = match socks_listener.accept().await {
-                    Ok(x) => x,
+                    Ok(x) => {
+                        fd_exhaust_count = 0;
+                        x
+                    }
                     Err(e) => {
-                        tracing::error!("accept (socks): {}", e);
+                        accept_backoff("socks", &e, &mut fd_exhaust_count).await;
                         continue;
                     }
                 };
@@ -237,6 +245,60 @@ impl ProxyServer {
         }
 
         Ok(())
+    }
+}
+
+/// Back-off helper for the accept() loop.
+///
+/// Motivated by issue #18: when the process hits its file-descriptor limit
+/// (EMFILE — `No file descriptors available`), `accept()` returns that
+/// error synchronously and is immediately ready to fire again. The old
+/// loop just `continue`'d, producing a wall of identical ERROR lines
+/// thousands per second and starving the tokio runtime of CPU that
+/// existing connections would have used to drain and close.
+///
+/// Two things this does right:
+///   1. Sleeps when `EMFILE` / `ENFILE` are seen, proportional to how long
+///      the problem has been going on (exponential-ish, capped at 2s).
+///      Gives existing connections a chance to finish and free fds.
+///   2. Rate-limits the log line: first occurrence logs a full warning
+///      with fix instructions, subsequent ones log once per 100 errors
+///      so the log doesn't fill up.
+async fn accept_backoff(kind: &str, err: &std::io::Error, count: &mut u64) {
+    let is_fd_limit = matches!(
+        err.raw_os_error(),
+        Some(libc_emfile) if libc_emfile == 24 || libc_emfile == 23
+    );
+
+    *count = count.saturating_add(1);
+
+    if is_fd_limit {
+        if *count == 1 {
+            tracing::warn!(
+                "accept ({}) hit RLIMIT_NOFILE: {}. Backing off. Raise the fd limit: \
+                 `ulimit -n 65536` before starting, or (OpenWRT) use the shipped procd \
+                 init which sets nofile=16384. The listener will keep retrying.",
+                kind,
+                err
+            );
+        } else if *count % 100 == 0 {
+            tracing::warn!(
+                "accept ({}) still fd-limited after {} retries. Current connections \
+                 need to finish before we can accept new ones.",
+                kind,
+                *count
+            );
+        }
+        // Back off exponentially-ish up to 2s. First hit: 50ms, 10th hit:
+        // ~500ms, 50th+: 2s cap.
+        let backoff_ms = (50u64 * (*count).min(40)).min(2000);
+        tokio::time::sleep(std::time::Duration::from_millis(backoff_ms)).await;
+    } else {
+        // Transient non-EMFILE error (e.g. ECONNABORTED from a client that
+        // went away during the handshake). One-line log, short sleep to
+        // avoid a tight loop in case it repeats.
+        tracing::error!("accept ({}): {}", kind, err);
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
     }
 }
 

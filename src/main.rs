@@ -121,10 +121,6 @@ async fn main() -> ExitCode {
     // Install default rustls crypto provider (ring).
     let _ = rustls::crypto::ring::default_provider().install_default();
 
-    // Bump RLIMIT_NOFILE where possible — OpenWRT/Alpine hosts often ship a
-    // default so low the proxy runs out of fds under normal browser load.
-    mhrv_rs::rlimit::raise_nofile_limit_best_effort();
-
     let args = match parse_args() {
         Ok(a) => a,
         Err(e) => {
@@ -169,6 +165,13 @@ async fn main() -> ExitCode {
     };
 
     init_logging(&config.log_level);
+
+    // Bump RLIMIT_NOFILE now that tracing is live — OpenWRT/Alpine hosts
+    // often ship a default so low (issue #8, issue #18) that we run out
+    // of fds under normal proxy load. This logs the before/after values
+    // at info level so field reports tell us whether the kernel cap is
+    // the real culprit.
+    mhrv_rs::rlimit::raise_nofile_limit_best_effort();
 
     match args.command {
         Command::Test => {

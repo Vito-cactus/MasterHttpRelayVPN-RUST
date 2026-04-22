@@ -154,7 +154,9 @@ impl ProxyServer {
             "Listening SOCKS5 on {} — xray / Telegram / app-level SOCKS5 clients use this.",
             socks_addr
         );
-
+        // Pre-warm the outbound connection pool so the user's first request
+        // doesn't pay a fresh TLS handshake to Google edge. Best-effort;
+        // failures are logged and ignored.
         let warm_fronter = self.fronter.clone();
         tokio::spawn(async move {
             warm_fronter.warm(3).await;

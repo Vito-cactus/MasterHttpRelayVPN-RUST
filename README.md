@@ -88,7 +88,7 @@ This part is unchanged from the original project. Follow @masterking32's guide o
 
 1. Open <https://script.google.com> while signed into your Google account.
 2. **New project**, delete the default code.
-3. Copy the contents of [`Code.gs` from the original repo](https://github.com/masterking32/MasterHttpRelayVPN/blob/python_testing/Code.gs) ([raw](https://raw.githubusercontent.com/masterking32/MasterHttpRelayVPN/refs/heads/python_testing/Code.gs)) into the editor.
+3. Copy the contents of [`Code.gs` from the original repo](https://github.com/masterking32/MasterHttpRelayVPN/blob/python_testing/apps_script/Code.gs) ([raw](https://raw.githubusercontent.com/masterking32/MasterHttpRelayVPN/refs/heads/python_testing/apps_script/Code.gs)) into the editor. If that URL is unreachable from your network, there's a mirrored copy in this repo at [`assets/apps_script/Code.gs`](assets/apps_script/Code.gs) — same file, pulled from upstream.
 4. Change `const AUTH_KEY = "..."` to a strong secret only you know.
 5. **Deploy → New deployment → Web app**.
    - Execute as: **Me**
@@ -385,7 +385,7 @@ Original project: <https://github.com/masterking32/MasterHttpRelayVPN> by [@mast
 
 ۱. به <https://script.google.com> بروید و با حساب گوگل خودتان وارد شوید
 ۲. روی **`New project`** کلیک کنید و کد پیش‌فرض را پاک کنید
-۳. محتوای فایل [`Code.gs`](https://github.com/masterking32/MasterHttpRelayVPN/blob/python_testing/Code.gs) را از ریپوی اصلی کپی کنید و داخل ویرایشگر بچسبانید
+۳. محتوای فایل [`Code.gs`](https://github.com/masterking32/MasterHttpRelayVPN/blob/python_testing/apps_script/Code.gs) را از ریپوی اصلی کپی کنید و داخل ویرایشگر بچسبانید. اگر به آدرس بالا دسترسی ندارید، یک کپی از همین فایل داخل این ریپو هم هست: [`assets/apps_script/Code.gs`](assets/apps_script/Code.gs)
 ۴. بالای کد، خط `const AUTH_KEY = "..."` را پیدا کنید و مقدار آن را به یک رمز قوی و خاص خودتان تغییر دهید (یک رشتهٔ تصادفی حداقل ۱۶ کاراکتری کافی است، مثلاً `aK8f3xM9pQ2nL5vR`)
 ۵. روی دکمهٔ آبی **`Deploy`** در بالا سمت راست کلیک کنید و **`New deployment`** را بزنید
 ۶. **`Type`** را روی **`Web app`** بگذارید و این تنظیمات را اعمال کنید:

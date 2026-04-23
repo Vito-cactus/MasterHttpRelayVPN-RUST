@@ -1089,6 +1089,11 @@ pub const DEFAULT_GOOGLE_SNI_POOL: &[&str] = &[
     // use: we never actually HTTP-to it, just present it in the TLS
     // handshake.
     "accounts.googl.com",
+    // scholar.google.com — same logic as accounts.googl.com, reported
+    // in #47 as a DPI-passing SNI on MCI / Samantel. Covered by the
+    // core *.google.com cert so it handshakes normally against
+    // google_ip:443.
+    "scholar.google.com",
 ];
 
 /// Build the pool of SNI hosts used for outbound connections to the Google

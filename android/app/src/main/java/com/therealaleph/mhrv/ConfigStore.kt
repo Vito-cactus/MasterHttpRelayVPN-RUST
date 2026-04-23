@@ -289,4 +289,6 @@ val DEFAULT_SNI_POOL: List<String> = listOf(
     // subdomains are selectively SNI-blocked. Must mirror the Rust list
     // in src/domain_fronter.rs exactly.
     "accounts.googl.com",
+    // Issue #47: same DPI-passing behaviour on MCI / Samantel.
+    "scholar.google.com",
 )

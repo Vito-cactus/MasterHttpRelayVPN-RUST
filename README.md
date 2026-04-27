@@ -548,6 +548,7 @@ Donations cover hosting, self-hosted CI runner costs, and continued maintenance.
 | **`Google IP`** | پیش‌فرض `216.239.38.120` معمولاً خوب است. دکمهٔ `scan` کنارش IPهای دیگر گوگل را تست می‌کند و سریع‌ترین را نشان می‌دهد |
 | **`Front domain`** | پیش‌فرض `www.google.com` را نگه دارید |
 | **`HTTP port`** / **`SOCKS5 port`** | پیش‌فرض‌های `8085` و `8086` خوب‌اند |
+|
 
 بعد روی **`Save config`** و سپس **`Start`** کلیک کنید. هر وقت خواستید وضعیت را تست کنید، دکمهٔ **`Test`** را بزنید — یک درخواست کامل می‌فرستد و نتیجه را نشان می‌دهد.
 

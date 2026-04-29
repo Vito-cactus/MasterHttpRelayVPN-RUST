@@ -13,7 +13,8 @@ The same trick works on any multi-tenant CDN edge that:
 2. dispatches to the right backend by inner HTTP `Host`, and
 3. presents a TLS cert whose name matches the SNI you choose.
 
-Vercel and Fastly fit the bill. Pick a benign-looking domain hosted on
+Vercel, Fastly, and AWS CloudFront (which is what Netlify-hosted sites
+sit behind) all fit the bill. Pick a benign-looking domain hosted on
 the same edge, use it as the SNI, and you can route many other domains
 on that edge through the same tunnel without burning Apps Script quota.
 
@@ -51,7 +52,8 @@ the recipe is:
 
 1. Pick the target edge (Vercel, Fastly, …).
 2. Find a neutral, never-blocked domain hosted there. Vercel: `react.dev`,
-   `nextjs.org`. Fastly: `www.python.org`, `pypi.org`.
+   `nextjs.org`. Fastly: `www.python.org`, `pypi.org`. AWS CloudFront
+   (where Netlify lives): `letsencrypt.org`, `aws.amazon.com`.
 3. Resolve that domain (`dig +short react.dev A`) — pick one IP, drop
    it in `ip`.
 4. List the domains you actually want to reach via this edge in

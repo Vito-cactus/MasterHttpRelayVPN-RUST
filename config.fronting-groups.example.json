@@ -37,6 +37,15 @@
         "pypi.org",
         "fastly.com"
       ]
+    },
+    {
+      "name": "netlify",
+      "ip": "35.157.26.135",
+      "sni": "letsencrypt.org",
+      "domains": [
+        "netlify.app",
+        "netlify.com"
+      ]
     }
   ]
 }

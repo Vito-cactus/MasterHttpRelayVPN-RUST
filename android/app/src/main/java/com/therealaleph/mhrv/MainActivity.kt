@@ -173,30 +173,36 @@ class MainActivity : AppCompatActivity() {
                 }
             },
             onStop = {
-                // Three-step teardown. Each step is defensive against a
-                // different failure mode we've actually hit in testing:
+                // Single-step graceful teardown. ACTION_STOP delivered via
+                // startService() reaches MhrvVpnService.onStartCommand,
+                // which spawns the `mhrv-teardown` background thread that
+                // tears down tun2proxy + the Rust runtime and then calls
+                // stopSelf() at the end of teardown. Service stops on its
+                // own — we don't need (and must not) follow up with
+                // stopService().
                 //
-                //   1. ACTION_STOP — graceful path. The service receives it,
-                //      runs its teardown (stops tun2proxy, closes the TUN
-                //      fd, shuts down the Rust runtime) and stopSelf()'s.
-                //      This is what we want 99% of the time.
+                // History (#666 from @ilok67): we used to call stopService()
+                // immediately after startService(stopAction), as belt-and-
+                // suspenders against a "force-closed then reopened zombie"
+                // case. That second call was firing onDestroy() while the
+                // mhrv-teardown thread was still running, racing two threads
+                // through the lifecycle and crashing on tap-to-disconnect.
+                // The teardown thread's idempotency guard (tornDown
+                // AtomicBoolean) protects against double-teardown of native
+                // state, but it can't protect against OS-level lifecycle
+                // races on stopSelf vs stopService. ACTION_STOP alone is
+                // enough for both the live-service and zombie cases —
+                // startService creates a fresh service in the new process
+                // for zombies, runs teardown (no-op on already-clean state)
+                // and stops it.
                 //
-                //   2. stopService() — covers the "force-closed then
-                //      reopened" zombie case. Android may auto-restart our
-                //      START_STICKY service in a fresh process after the
-                //      user swipes us away from Recents, and the user's
-                //      next Stop tap needs to actually unbind even if our
-                //      in-memory TUN fd reference is gone. stopService is
-                //      idempotent so it's safe to follow the graceful path.
-                //
-                //   3. We do NOT touch the VpnService permission — that's
-                //      the OS-wide VPN grant and the user approved it
-                //      deliberately. Revoking it would force a re-prompt
-                //      on next Start, which is worse UX.
+                // We do NOT touch the VpnService permission — that's the
+                // OS-wide VPN grant and the user approved it deliberately.
+                // Revoking it would force a re-prompt on next Start, which
+                // is worse UX.
                 val stopAction = Intent(this, MhrvVpnService::class.java)
                     .setAction(MhrvVpnService.ACTION_STOP)
                 startService(stopAction)
-                stopService(Intent(this, MhrvVpnService::class.java))
             },
             onInstallCaConfirmed = {
                 // The flow is (1) export cert, (2) copy it to Downloads so

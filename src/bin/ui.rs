@@ -2171,6 +2171,41 @@ fn background_thread(shared: Arc<Shared>, rx: Receiver<Cmd>) {
 
             Ok(Cmd::Test(cfg)) => {
                 let shared2 = shared.clone();
+                // Short-circuit modes where `test_cmd::run` deliberately
+                // refuses (full mode, direct mode). Those return false
+                // even when the proxy is healthy, which surfaced as
+                // "Test failed" + alarming red status — see #665. Show
+                // a friendly notice instead and skip the test path.
+                let mode_kind = cfg.mode_kind().ok();
+                let mode_explainer = match mode_kind {
+                    Some(mhrv_rs::config::Mode::Full) => Some(
+                        "Test Relay is wired only for apps_script mode. \
+                         In full mode the data plane is the tunnel-node — \
+                         to verify it end-to-end, start the proxy and load \
+                         https://whatismyipaddress.com in your browser \
+                         via 127.0.0.1:8085. The IP shown should be your \
+                         tunnel-node's VPS IP. Tracking a real Full-mode \
+                         test in #160."
+                    ),
+                    Some(mhrv_rs::config::Mode::Direct) => Some(
+                        "Test Relay is wired only for apps_script mode. \
+                         In direct mode there is no Apps Script relay — \
+                         every request goes through the SNI-rewrite tunnel \
+                         straight to Google's edge. Verify by loading \
+                         https://www.google.com via the proxy."
+                    ),
+                    _ => None,
+                };
+                if let Some(msg) = mode_explainer {
+                    {
+                        let mut st = shared.state.lock().unwrap();
+                        st.last_test_ok = None;
+                        st.last_test_msg = msg.into();
+                        st.last_test_msg_at = Some(Instant::now());
+                    }
+                    push_log(&shared, &format!("[ui] test skipped: {}", msg));
+                    continue;
+                }
                 push_log(&shared, "[ui] running test...");
                 rt.spawn(async move {
                     let ok = test_cmd::run(&cfg).await;

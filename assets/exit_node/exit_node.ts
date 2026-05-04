@@ -1,25 +1,27 @@
-// mhrv-rs exit node — deploy as an HTTP endpoint on val.town (or Deno
-// Deploy, fly.io, anywhere with a public residential-adjacent IP).
+// mhrv-rs exit node — deploy as an HTTP endpoint on any serverless
+// TypeScript host with a public IP that isn't a Google datacenter
+// (Deno Deploy, fly.io, your own VPS, etc.). Uses only web-standard
+// `Request` / `Response` / `fetch` so it's portable across runtimes.
 //
 // Purpose: chain client → Apps Script → this exit node → destination.
 // Apps Script's UrlFetchApp can't reach Cloudflare-protected sites that
-// flag Google datacenter IPs as bots (chatgpt.com, claude.ai, grok.x.ai,
+// flag Google datacenter IPs as bots (chatgpt.com, claude.ai, grok.com,
 // many other CF-fronted SaaS). This exit node sits between Apps Script
-// and the destination; the destination sees the exit node's IP (val.town's
-// outbound, generally not flagged as Google datacenter) and accepts the
-// request.
+// and the destination; the destination sees the exit node's outbound IP
+// (generally not flagged as Google datacenter) and accepts the request.
 //
 // Setup:
-//   1. Sign in to https://val.town and create a new HTTP val (TypeScript)
-//   2. Paste the contents of this file
-//   3. Set PSK below to a strong secret (use `openssl rand -hex 32`
-//      from a terminal — DO NOT leave the placeholder in production)
-//   4. Save and copy the val's public URL (looks like
-//      https://your-handle-mhrv.web.val.run)
+//   1. Pick a host that runs web-standard fetch handlers (e.g. Deno
+//      Deploy, fly.io with a thin server wrapper, or any cheap VPS
+//      running Deno / Node + this script as a handler).
+//   2. Paste the contents of this file as the request handler.
+//   3. Set PSK below to a strong secret (`openssl rand -hex 32` from
+//      a terminal — DO NOT leave the placeholder in production).
+//   4. Deploy and copy the public URL of the deployed handler.
 //   5. In mhrv-rs config.json, add:
 //        "exit_node": {
 //          "enabled": true,
-//          "relay_url": "https://your-handle-mhrv.web.val.run",
+//          "relay_url": "https://your-deployed-exit-node.example.com",
 //          "psk": "<the same PSK you set above>",
 //          "mode": "selective",
 //          "hosts": ["chatgpt.com", "claude.ai", "x.com", "grok.com"]
@@ -87,7 +89,7 @@ export default async function (req: Request): Promise<Response> {
       {
         e:
           "exit_node misconfigured: PSK is still the placeholder. Set " +
-          "a strong secret in the val.town source before deploying.",
+          "a strong secret in the source before deploying.",
       },
       { status: 503 },
     );
@@ -118,7 +120,7 @@ export default async function (req: Request): Promise<Response> {
 
     // Loop guard: if u points at this exit node's own host, refuse.
     // Without this, a misconfigured client could chain exit-node →
-    // exit-node → exit-node → ... and burn the val.town runtime budget.
+    // exit-node → exit-node → ... and burn the host's runtime budget.
     try {
       const reqUrl = new URL(req.url);
       const dstUrl = new URL(u);
